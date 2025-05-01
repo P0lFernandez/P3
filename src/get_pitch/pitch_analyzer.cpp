@@ -3,7 +3,7 @@
 #include <iostream>
 #include <math.h>
 #include "pitch_analyzer.h"
-
+#include <fstream>
 using namespace std;
 
 /// Name space of UPC
@@ -12,6 +12,11 @@ namespace upc {
 
     for (unsigned int l = 0; l < r.size(); ++l) {
   		/// \TODO Compute the autocorrelation r[l]
+      ///Para cada TODO en el codigo, añadir comando
+      /// \FET Hemos hecho la autocorrelacion sesgada
+      /// \T[
+       r_{xx}[m]=\frac{1}{N} \sum_{n=0}^{N-m} x[n] x{n+m};
+      /// f]
     }
 
     if (r[0] == 0.0F) //to avoid log() and divide zero 
@@ -25,9 +30,29 @@ namespace upc {
     window.resize(frameLen);
 
     switch (win_type) {
-    case HAMMING:
-      /// \TODO Implement the Hamming window
-      break;
+      case HAMMING: {
+        /// \TODO Implement the Hamming window
+        /// \DONE Implementació de la finestra de Hamming
+          float a0 = 0.53836;
+          float a1 = 0.46164;
+          float N = frameLen;
+          vector<float> hamming(N);
+  
+          for(unsigned int n = 0;n<N; n++){
+            hamming[n] = a0-a1*cos(2*M_PI*n/(N-1));
+          }
+  
+        // //Creación de fichero para comprobar la correcta creación de la ventana de hamming
+        //   std::string filename = "hamming.txt";
+        //   std::ofstream file(filename);
+        //   for(const float &value : hamming){
+        //     file << value << std::endl;
+        //   }
+        //     file.close();
+  
+        window=hamming;
+        break;
+      }
     case RECT:
     default:
       window.assign(frameLen, 1);
@@ -50,7 +75,14 @@ namespace upc {
     /// \TODO Implement a rule to decide whether the sound is voiced or not.
     /// * You can use the standard features (pot, r1norm, rmaxnorm),
     ///   or compute and use other ones.
-    return true;
+    float th_1 = 0.55; 
+    if(rmaxnorm<this->llindar_rmax){
+      return true;
+    }
+    if(r1norm<th_1){
+      return true;
+    }
+    return false;
   }
 
   float PitchAnalyzer::compute_pitch(vector<float> & x) const {
@@ -66,7 +98,7 @@ namespace upc {
     //Compute correlation
     autocorrelation(x, r);
 
-    vector<float>::const_iterator iR = r.begin(), iRMax = iR;
+    //vector<float>::const_iterator iR = r.begin(), iRMax = iR;
 
     /// \TODO 
 	/// Find the lag of the maximum value of the autocorrelation away from the origin.<br>
@@ -75,9 +107,15 @@ namespace upc {
 	///    - The lag corresponding to the maximum value of the pitch.
     ///	   .
 	/// In either case, the lag should not exceed that of the minimum value of the pitch.
-
-    unsigned int lag = iRMax - r.begin();
-
+  float rMax = r[npitch_min];
+   // unsigned int lag = iRMax - r.begin();
+   unsigned int lag = npitch_min;
+    for(unsigned int l = npitch_min; l<npitch_max; l++){
+      if(r[l]>rMax){
+        lag = l;
+        rMax = r[l];
+      }
+    }
     float pot = 10 * log10(r[0]);
 
     //You can print these (and other) features, look at them using wavesurfer
