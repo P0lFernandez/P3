@@ -20,6 +20,7 @@ Ejercicios básicos
    * Inserte una gŕafica donde, en un *subplot*, se vea con claridad la señal temporal de un segmento de
      unos 30 ms de un fonema sonoro y su periodo de pitch; y, en otro *subplot*, se vea con claridad la
 	 autocorrelación de la señal y la posición del primer máximo secundario.
+   
    En la siguiente imagen se ve una ventana de 30ms en el programa Wavesurfer donde la primera gráfica es Waveforme Pane, la de debajo el Pitch Countour y por ultimo la señal de prueba.wav
    ![alt text](image.png)
 
@@ -75,7 +76,7 @@ Ejercicios básicos
    ![alt text](image-5.png)
    Tras varias pruebas, hemos llegado a la conclusion que este resultado de 90,74% es el más optimo.
 
-   
+
 Ejercicios de ampliación
 ------------------------
 
