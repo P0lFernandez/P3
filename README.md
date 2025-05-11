@@ -15,21 +15,7 @@ Ejercicios básicos
 
    * Complete el cálculo de la autocorrelación e inserte a continuación el código correspondiente.
 
-   void PitchAnalyzer::autocorrelation(const vector<float> &x, vector<float> &r) const {
-
-    for (unsigned int l = 0; l < r.size(); ++l) {
-  		/// \TODO Compute the autocorrelation r[l]
-      /// \FET autocorrelació calculada.
-      r[l]=0;
-      for(unsigned int n=l; n<x.size();n++){
-        r[l] += x[n]*x[n-l];
-      }
-      r[l] = r[l]/x.size();
-    }
-
-    if (r[0] == 0.0F) 
-      r[0] = 1e-10; 
-  }
+   ![alt text](image-4.png)
 
    * Inserte una gŕafica donde, en un *subplot*, se vea con claridad la señal temporal de un segmento de
      unos 30 ms de un fonema sonoro y su periodo de pitch; y, en otro *subplot*, se vea con claridad la
@@ -39,40 +25,19 @@ Ejercicios básicos
 
    ![alt text](image-3.png)
 
-   En esta gráfica podemos observar la autocorrelacion de este fragmento de audio donde se ve que el maximo secundario se situa en la muestra 40 aproximadamente.
-   El código para este plot esta en el archivo grafico.py.
+   En esta gráfica podemos observar la autocorrelacion de este fragmento de audio donde se ve que el maximo secundario se situa en la muestra 40 aproximadamente. El código para este plot esta en el archivo grafico.py.
+
 	 NOTA: es más que probable que tenga que usar Python, Octave/MATLAB u otro programa semejante para
 	 hacerlo. Se valorará la utilización de la biblioteca matplotlib de Python.
 
    * Determine el mejor candidato para el periodo de pitch localizando el primer máximo secundario de la
      autocorrelación. Inserte a continuación el código correspondiente.
 
-    float rMax = r[npitch_min];
-    unsigned int lag = npitch_min;
-    
-    for(unsigned int l = npitch_min; l<npitch_max; l++){
-      if(r[l]>rMax){
-        lag = l;
-        rMax = r[l];
-      }
-    }
-  
-    float pot = 10 * log10(r[0]);
+    ![alt text](image-6.png)
 
    * Implemente la regla de decisión sonoro o sordo e inserte el código correspondiente.
 
-   bool PitchAnalyzer::unvoiced(float pot, float r1norm, float rmaxnorm) const {
-    /// \TODO Implement a rule to decide whether the sound is voiced or not.
-    /// * You can use the standard features (pot, r1norm, rmaxnorm),
-    ///   or compute and use other ones.
-    /// \FET 
-    float th_1 = 0.75; 
-    if(rmaxnorm<this->llindar_rmax || r1norm<th_1){
-      return true;
-    }
-    
-    return false;
-  }
+   ![alt text](image-7.png)
 
    * Puede serle útil seguir las instrucciones contenidas en el documento adjunto `código.pdf`.
 
@@ -108,7 +73,9 @@ Ejercicios básicos
 	`pitch_db/train`..
 
    ![alt text](image-5.png)
-   Tras varias pruebas, hemos llegado a la conclusion que este resultado de 90,74% es el más optimo
+   Tras varias pruebas, hemos llegado a la conclusion que este resultado de 90,74% es el más optimo.
+
+   
 Ejercicios de ampliación
 ------------------------
 
