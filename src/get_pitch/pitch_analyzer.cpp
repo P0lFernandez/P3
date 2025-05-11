@@ -12,14 +12,15 @@ namespace upc {
 
     for (unsigned int l = 0; l < r.size(); ++l) {
   		/// \TODO Compute the autocorrelation r[l]
-      ///Para cada TODO en el codigo, añadir comando
-      /// \FET Hemos hecho la autocorrelacion sesgada
-      /// \T[
-       r_{xx}[m]=\frac{1}{N} \sum_{n=0}^{N-m} x[n] x{n+m};
-      /// f]
+      /// \FET autocorrelació calculada.
+      r[l]=0;
+      for(unsigned int n=l; n<x.size();n++){
+        r[l] += x[n]*x[n-l];
+      }
+      r[l] = r[l]/x.size();
     }
 
-    if (r[0] == 0.0F) //to avoid log() and divide zero 
+    if (r[0] == 0.0F) 
       r[0] = 1e-10; 
   }
 
@@ -30,29 +31,30 @@ namespace upc {
     window.resize(frameLen);
 
     switch (win_type) {
-      case HAMMING: {
-        /// \TODO Implement the Hamming window
-        /// \DONE Implementació de la finestra de Hamming
-          float a0 = 0.53836;
-          float a1 = 0.46164;
-          float N = frameLen;
-          vector<float> hamming(N);
-  
-          for(unsigned int n = 0;n<N; n++){
-            hamming[n] = a0-a1*cos(2*M_PI*n/(N-1));
-          }
-  
-        // //Creación de fichero para comprobar la correcta creación de la ventana de hamming
-        //   std::string filename = "hamming.txt";
-        //   std::ofstream file(filename);
-        //   for(const float &value : hamming){
-        //     file << value << std::endl;
-        //   }
-        //     file.close();
-  
-        window=hamming;
-        break;
-      }
+    case HAMMING: {
+      /// \TODO Implement the Hamming window
+      /// \FET Finestra de Hamming
+        float a0 = 0.53836;
+        float a1 = 0.46164;
+        float N = frameLen;
+        vector<float> hamming(N);
+
+        for(unsigned int n = 0;n<N-1; n++){
+          hamming[n] = a0-a1*cos(2*M_PI*n/(N-1));
+        }
+
+      // //Creación de fichero para comprobar la correcta creación de la ventana de hamming
+      //   std::string filename = "hamming.txt";
+      //   std::ofstream file(filename);
+      //   for(const float &value : hamming){
+      //     file << value << std::endl;
+      //   }
+      //     file.close();
+
+      window=hamming;
+      break;
+    }
+    
     case RECT:
     default:
       window.assign(frameLen, 1);
@@ -62,7 +64,7 @@ namespace upc {
   void PitchAnalyzer::set_f0_range(float min_F0, float max_F0) {
     npitch_min = (unsigned int) samplingFreq/max_F0;
     if (npitch_min < 2)
-      npitch_min = 2;  // samplingFreq/2
+      npitch_min = 2;  
 
     npitch_max = 1 + (unsigned int) samplingFreq/min_F0;
 
@@ -75,13 +77,12 @@ namespace upc {
     /// \TODO Implement a rule to decide whether the sound is voiced or not.
     /// * You can use the standard features (pot, r1norm, rmaxnorm),
     ///   or compute and use other ones.
-    float th_1 = 0.55; 
-    if(rmaxnorm<this->llindar_rmax){
+    /// \FET 
+    float th_1 = 0.75; 
+    if(rmaxnorm<this->llindar_rmax || r1norm<th_1){
       return true;
     }
-    if(r1norm<th_1){
-      return true;
-    }
+    
     return false;
   }
 
@@ -97,7 +98,7 @@ namespace upc {
 
     //Compute correlation
     autocorrelation(x, r);
-
+    
     //vector<float>::const_iterator iR = r.begin(), iRMax = iR;
 
     /// \TODO 
@@ -105,17 +106,21 @@ namespace upc {
 	/// Choices to set the minimum value of the lag are:
 	///    - The first negative value of the autocorrelation.
 	///    - The lag corresponding to the maximum value of the pitch.
+  ///   In either case, the lag should not exceed that of the minimum value of the pitch.
+  /// \FET
+  ///
     ///	   .
-	/// In either case, the lag should not exceed that of the minimum value of the pitch.
-  float rMax = r[npitch_min];
-   // unsigned int lag = iRMax - r.begin();
-   unsigned int lag = npitch_min;
+
+    float rMax = r[npitch_min];
+    unsigned int lag = npitch_min;
+    
     for(unsigned int l = npitch_min; l<npitch_max; l++){
       if(r[l]>rMax){
         lag = l;
         rMax = r[l];
       }
     }
+  
     float pot = 10 * log10(r[0]);
 
     //You can print these (and other) features, look at them using wavesurfer
@@ -127,7 +132,8 @@ namespace upc {
 #endif
     
     if (unvoiced(pot, r[1]/r[0], r[lag]/r[0]))
-      return 0;
+       return 0;
+            
     else
       return (float) samplingFreq/(float) lag;
   }

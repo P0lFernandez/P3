@@ -4,7 +4,8 @@
 #include <fstream>
 #include <string.h>
 #include <errno.h>
-#include <cmath> ////////////////////
+#include <cmath> 
+#include <algorithm>
 #include "wavfile_mono.h"
 #include "pitch_analyzer.h"
 
@@ -25,6 +26,7 @@ Usage:
     get_pitch --version
 
 Options:
+    --llindar-rmax FLOAT  llindar de decisio sonor o sord per al maxim secundari de la autocorrelacio [default: 0.41]
     -h, --help  Show this screen
     --version   Show the version of the project
 
@@ -35,59 +37,93 @@ Arguments:
                     - If considered unvoiced, f0 must be set to f0 = 0
 )";
 
+void CenterClipping(vector<float>& signal) {
+    float max = fabs(signal[0]);
+    for (size_t i = 1; i < signal.size(); ++i) {
+        max = std::max(max, fabs(signal[i]));
+    }
+
+    float th = max * 0.08;
+    for (size_t i = 0; i < signal.size(); ++i) {
+        if (fabs(signal[i]) <= th) {
+            signal[i] = 0.0f;
+        }
+    }
+}
+
+void ordenar(std::vector<float>& window) {
+    for (size_t i = 0; i < window.size() - 1; ++i) {
+        for (size_t j = 0; j < window.size() - 1 - i; ++j) {
+            if (window[j] < window[j + 1]) {
+                std::swap(window[j], window[j + 1]);
+            }
+        }
+    }
+}
+
+void MedianFilter(std::vector<float>& signal) {
+    int w_size = 5;
+    int half_w = (w_size + 1) / 2;
+
+    for (size_t i = 0; i <= signal.size() - w_size; i += w_size) {
+        std::vector<float> window(signal.begin() + i, signal.begin() + i + w_size);
+        ordenar(window);
+        float mediana = window[half_w - 1];
+        for (int j = 0; j < w_size; ++j) {
+            signal[i + j] = mediana;
+        }
+    }
+}
+
 int main(int argc, const char *argv[]) {
-	/// \TODO 
-	///  Modify the program syntax and the call to **docopt()** in order to
-	///  add options and arguments to the program.
     std::map<std::string, docopt::value> args = docopt::docopt(USAGE,
-        {argv + 1, argv + argc},	// array of arguments, without the program name
-        true,    // show help if requested
-        "2.0");  // version string
+        {argv + 1, argv + argc},
+        true,
+        "2.0");
 
-	std::string input_wav = args["<input-wav>"].asString();
-	std::string output_txt = args["<output-txt>"].asString();
+    std::string input_wav = args["<input-wav>"].asString();
+    std::string output_txt = args["<output-txt>"].asString();
+    float llindar_rmax = stof(args["--llindar-rmax"].asString());
 
-  // Read input sound file
-  unsigned int rate;
-  vector<float> x;
-  if (readwav_mono(input_wav, rate, x) != 0) {
-    cerr << "Error reading input file " << input_wav << " (" << strerror(errno) << ")\n";
-    return -2;
-  }
+    unsigned int rate;
+    vector<float> x;
+    if (readwav_mono(input_wav, rate, x) != 0) { 
+        cerr << "Error reading input file " << input_wav << " (" << strerror(errno) << ")\n";
+        return -2;
+    }
 
-  int n_len = rate * FRAME_LEN;
-  int n_shift = rate * FRAME_SHIFT;
+    int n_len = rate * FRAME_LEN;
+    int n_shift = rate * FRAME_SHIFT;
 
-  // Define analyzer
-  PitchAnalyzer analyzer(n_len, rate, PitchAnalyzer::RECT, 50, 500);
+    PitchAnalyzer analyzer(n_len, rate, PitchAnalyzer::RECT, 50, 500, llindar_rmax);
 
-  /// \TODO
-  /// Preprocess the input signal in order to ease pitch estimation. For instance,
-  /// central-clipping or low pass filtering may be used.ff
-  
-  // Iterate for each frame and save values in f0 vector
-  vector<float>::iterator iX;
-  vector<float> f0;
-  for (iX = x.begin(); iX + n_len < x.end(); iX = iX + n_shift) {
-    float f = analyzer(iX, iX + n_len);
-    f0.push_back(f);
-  }
+    CenterClipping(x);
 
-  /// \TODO
-  /// Postprocess the estimation in order to supress errors. For instance, a median filter
-  /// or time-warping may be used.
+    vector<float>::iterator iX;
+    vector<float> f0;
+    for (iX = x.begin(); iX + n_len < x.end(); iX = iX + n_shift) {
+        float f = analyzer(iX, iX + n_len);
+        f0.push_back(f);
+    }
 
-  // Write f0 contour into the output file
-  ofstream os(output_txt);
-  if (!os.good()) {
-    cerr << "Error reading output file " << output_txt << " (" << strerror(errno) << ")\n";
-    return -3;
-  }
+    MedianFilter(x);
 
-  os << 0 << '\n'; //pitch at t=0
-  for (iX = f0.begin(); iX != f0.end(); ++iX) 
-    os << *iX << '\n';
-  os << 0 << '\n';//pitch at t=Dur
+    std::ofstream file("mediana.txt");
+    for (const float& value : x) {
+        file << value << std::endl;
+    }
+    file.close();
 
-  return 0;
+    ofstream os(output_txt);
+    if (!os.good()) {
+        cerr << "Error reading output file " << output_txt << " (" << strerror(errno) << ")\n";
+        return -3;
+    }
+
+    os << 0 << '\n';
+    for (const float& val : f0) 
+        os << val << '\n';
+    os << 0 << '\n';
+
+    return 0;
 }
